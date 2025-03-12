@@ -7,7 +7,9 @@ def problem_fUNknown(predef_W,
                      N, L, dataset, A, list_bn, groups_N, considered_groups, 
                      timelimit=None, silence = False, linearize_product=False,
                      predef_C = None, known_objs = None, lambd = 1.,
-                     predef_u = None, predef_X = None):
+                     predef_u = None, predef_X = None,
+                     warmstart = None,
+                     call_callback=False):
 
     _,d = dataset.shape
     m,_ = A.shape
@@ -103,7 +105,7 @@ def problem_fUNknown(predef_W,
         model.addConstrs((P[k,j] >=  C[k,j] - (1-S[k,j])
                         for k in range(K) for j in range(d)), name="define_P3")
     else:
-        C = predef_C
+        C,c0 = predef_C
 
     if predef_X is None:
         X = model.addMVar(shape=(N,L), vtype=gp.GRB.BINARY, name="X")
@@ -125,7 +127,7 @@ def problem_fUNknown(predef_W,
         u = model.addMVar(shape=(different_Z_cal,L,m),
                           lb=-float('inf'), ub=0., vtype=gp.GRB.CONTINUOUS, name="u")
         model.addConstrs((u[feas_reg,l,:]@A == W[l,:]@C
-                    for feas_reg in range(different_Z_cal) for l in range(L)), name="dual_constr")
+                          for feas_reg in range(different_Z_cal) for l in range(L)), name="dual_constr")
     else:
         u = predef_u
        
@@ -160,13 +162,13 @@ def problem_fUNknown(predef_W,
     if timelimit is not None:
         model.setParam(gp.GRB.Param.TimeLimit, timelimit)
     
-    model.optimize(my_callback)
-    """
-    if (predef_W is None) and (predef_X is None):
+    if warmstart is not None:
+        (X_heur,(C_heur,c0_heur),u_heur) = warmstart
+        X.Start, C.Start, c0.Start, u.Start = X_heur, C_heur, c0_heur, u_heur
+    
+    if call_callback:
         model.optimize(my_callback)
     else:
         model.optimize()
-    """
-    
     
     return model, C,c0, X, u, solution_log, progress_logs

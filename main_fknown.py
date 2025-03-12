@@ -23,7 +23,7 @@ np.set_printoptions(suppress=True)
 #parameters
 N_test= 100
 list_N = [100]
-list_K = [3]
+list_K = [2]
 list_d = [20]
 list_n_vars_perturbed = [0,1] #<= d, number of variables
 list_interpretability = [False]
@@ -99,7 +99,7 @@ for seed in [2]:
                                     # heuristic solution
                                     inicio_heur = time.time()
                                     heur_outputs, obj_val_heur, best_iter = heuristic(seed, C, N, L, dataset_train, A, list_bn_train,  groups_N_train, considered_groups,
-                                                                                    init_type='optimal')
+                                                                                      init_type='optimal')
                                     time_in_heur = time.time() - inicio_heur
                                     
                                     #HACER QUE WARM STAR SATISFAGA SYMMETRY BREAKING

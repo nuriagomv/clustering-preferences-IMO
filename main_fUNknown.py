@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 #import imageio
 from heuristic_fknown import cluster_assignments
 from sklearn.metrics.pairwise import cosine_similarity
+from heuristic_fUNknown import heuristic
                                     
 
 # Permanently changes the pandas settings
@@ -24,14 +25,15 @@ np.set_printoptions(suppress=True)
 #parameters
 N_test= 100
 list_N = [25]
-list_K = [2,3]
-list_d = [10]
-list_lambd = [0.1,0.2,0.25,0.5]
+list_K = [2]
+list_d = [20]
+list_lambd = [0.1,0.25,0.5]
 list_n_vars_perturbed = [0,1] #<= d, number of variables
 timelimit = 3600.
+multistart = True
 
 
-for seed in [0]:
+for seed in [2]:
     for N in list_N:
         for K in list_K:
             for d in list_d:
@@ -55,7 +57,7 @@ for seed in [0]:
                     
                     for L in list_L:
                         for lambd in list_lambd:
-                        
+                            
                             print("\n-------------\n")
                             print("NUMBER OF CLUSTERS REQUIRED L =", L)
                             
@@ -96,10 +98,32 @@ for seed in [0]:
                                                         [0., .75, .25],
                                                         [1/3, 1/3, 1/3]])
                                     
+                                #WARMSTART
+                                # heuristic solution
+                                inicio_heur = time.time()
+                                heur_outputs, obj_val_heur, best_iter = heuristic(seed, predef_W, known_objs, lambd,
+                                                                                  N, L, dataset_train, A, list_bn_train,  groups_N_train, considered_groups,
+                                                                                  multistart = multistart)
+                                time_in_heur = time.time() - inicio_heur
+                                
+                                #HACER QUE WARM STAR SATISFAGA SYMMETRY BREAKING
+                                C_heur, c0_heur, X_heur, u_heur = heur_outputs[best_iter]['C'], heur_outputs[best_iter]['c0'], np.abs(heur_outputs[best_iter]['X']), heur_outputs[best_iter]['u']
+                                
+                                #print( pd.DataFrame(heuristic_outputs) )
+                                print("Time in heuristic: ", time_in_heur)
+                                print("Best solution found at iteration: ", best_iter, ", with objval: ", obj_val_heur)
+                                print("new C: \n", C_heur.round(2))
+                                print("new X: \n", X_heur.sum(axis=0))
+
+                                warmstart = (X_heur,(C_heur,c0_heur),u_heur)
+                                #warmstart = None
+                            
                                 inicio = time.time()
                                 output  = problem_fUNknown(predef_W, 
                                                            N, L, dataset_train, A, list_bn_train,  groups_N_train, considered_groups,
                                                            timelimit=timelimit, 
+                                                           warmstart = warmstart,
+                                                           call_callback=True,
                                                            known_objs =  known_objs, lambd=lambd)
                                 time_sol = time.time() - inicio
                                 
@@ -245,6 +269,11 @@ for seed in [0]:
                                             'd': d,
                                             'L': L, 
                                             'lambda': lambd,
+                                            'heuristic': heur_outputs,
+                                            'best_obj_val': obj_val_heur, 
+                                            'best_iter': best_iter,
+                                            'time_in_heur': time_in_heur,
+                                            'warmstart': warmstart,
                                             'optimality': model.status == 2,
                                             'time': round(time_sol,3),
                                             'gap': gap,
