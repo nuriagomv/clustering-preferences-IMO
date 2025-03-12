@@ -25,15 +25,16 @@ np.set_printoptions(suppress=True)
 #parameters
 N_test= 100
 list_N = [25]
-list_K = [2]
+list_K = [3]
 list_d = [20]
 list_lambd = [0.1,0.25,0.5]
-list_n_vars_perturbed = [0,1] #<= d, number of variables
+list_n_vars_perturbed = [1] #<= d, number of variables
 timelimit = 3600.
-multistart = True
+multistart = False
+mipgapabs = 1e-4 #https://docs.gurobi.com/projects/optimizer/en/current/reference/parameters.html
 
 
-for seed in [2]:
+for seed in [0,1,2]:
     for N in list_N:
         for K in list_K:
             for d in list_d:
@@ -49,11 +50,14 @@ for seed in [2]:
                     W_orig_test, dataset_test, list_bn_test, groups_N_test = W_orig[-N_test:,:], dataset[-N_test:,:], list_bn[-N_test:], groups_N[-N_test:]
                     
                     #number of clusters
+                    """
                     if K ==2:
                         L_max = K +1
                     if K>2:
                         L_max = K + math.comb(K, math.ceil(K/2))
                     list_L = list(range(2,L_max+1))
+                    """
+                    list_L=[2,3]
                     
                     for L in list_L:
                         for lambd in list_lambd:
@@ -103,7 +107,7 @@ for seed in [2]:
                                 inicio_heur = time.time()
                                 heur_outputs, obj_val_heur, best_iter = heuristic(seed, predef_W, known_objs, lambd,
                                                                                   N, L, dataset_train, A, list_bn_train,  groups_N_train, considered_groups,
-                                                                                  multistart = multistart)
+                                                                                  multistart = multistart, silence=True)
                                 time_in_heur = time.time() - inicio_heur
                                 
                                 #HACER QUE WARM STAR SATISFAGA SYMMETRY BREAKING
@@ -124,14 +128,17 @@ for seed in [2]:
                                                            timelimit=timelimit, 
                                                            warmstart = warmstart,
                                                            call_callback=True,
+                                                           mipgapabs = mipgapabs,
                                                            known_objs =  known_objs, lambd=lambd)
                                 time_sol = time.time() - inicio
                                 
-                                model, C,c0, X, u, _, _ = output
+                                model, C,c0, X, u, solution_log, progress_logs = output
+
+                                
                                 W=predef_W
                                 
                                 print("time to sol: ", round(time_sol,2), "s.")
-                                gap = 0. if model.status == 2 else model.MIPGap*100
+                                gap = 0. if model.status == 2 else solution_log[-1]["my gap (%)"]#model.MIPGap*100
                                 obj_val_solver = model.objVal
                                 print("objective val from solver: ", obj_val_solver, ", gap: ", gap)
                                 
@@ -209,7 +216,7 @@ for seed in [2]:
                                                                         W_re[X_re[n,:].argmax(),:]) 
                                                         for n in range(N)])
                                 TRAIN_equal_maxs, TRAIN_rmse, TRAIN_rho, TRAIN_tau, TRAIN_cos_sim, TRAIN_emd = TRAIN_metrics
-                                TRmean_equal_maxs, TRmean_rmse, TRmean_rho, TRmean_tau, TRmean_cos_sim, TRmean_emd = [np.mean(m).round(2) for m in [TRAIN_equal_maxs, TRAIN_rmse, TRAIN_rho, TRAIN_tau, TRAIN_cos_sim, TRAIN_emd]]
+                                TRmean_equal_maxs, TRmean_rmse, TRmean_rho, TRmean_tau, TRmean_cos_sim, TRmean_emd = [np.mean(m) for m in [TRAIN_equal_maxs, TRAIN_rmse, TRAIN_rho, TRAIN_tau, TRAIN_cos_sim, TRAIN_emd]]
                                 print("MEAN TRAIN performance metrics: (equal_maxs, rmse, rho, tau, cos_sim, emd): ",
                                     TRmean_equal_maxs, TRmean_rmse, TRmean_rho, TRmean_tau, TRmean_cos_sim, TRmean_emd)
 
@@ -223,7 +230,7 @@ for seed in [2]:
                                                                         W_re[clusters_test[n],:]) 
                                                         for n in range(N_test)])
                                 TEST_equal_maxs, TEST_rmse, TEST_rho, TEST_tau, TEST_cos_sim, TEST_emd = TEST_metrics
-                                TSmean_equal_maxs, TSmean_rmse, TSmean_rho, TSmean_tau, TSmean_cos_sim, TSmean_emd = [np.mean(m).round(2) for m in [TEST_equal_maxs, TEST_rmse, TEST_rho, TEST_tau, TEST_cos_sim, TEST_emd]]
+                                TSmean_equal_maxs, TSmean_rmse, TSmean_rho, TSmean_tau, TSmean_cos_sim, TSmean_emd = [np.mean(m) for m in [TEST_equal_maxs, TEST_rmse, TEST_rho, TEST_tau, TEST_cos_sim, TEST_emd]]
                                 print("MEAN TEST performance metrics: (equal_maxs, rmse, rho, tau, cos_sim, emd): ",
                                     TSmean_equal_maxs, TSmean_rmse, TSmean_rho, TSmean_tau, TSmean_cos_sim, TSmean_emd)
                                 

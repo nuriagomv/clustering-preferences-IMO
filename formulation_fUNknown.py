@@ -9,7 +9,8 @@ def problem_fUNknown(predef_W,
                      predef_C = None, known_objs = None, lambd = 1.,
                      predef_u = None, predef_X = None,
                      warmstart = None,
-                     call_callback=False):
+                     call_callback=False,
+                     mipgapabs = None):
 
     _,d = dataset.shape
     m,_ = A.shape
@@ -32,7 +33,10 @@ def problem_fUNknown(predef_W,
             runtime = model.cbGet(gp.GRB.Callback.RUNTIME)  # Time when found
             gap = model.cbGet(gp.GRB.Callback.MIPSOL_OBJBST)  # Best bound so far
             best_bound = model.cbGet(gp.GRB.Callback.MIPSOL_OBJBND)  # Current best bound
-            mip_gap = abs(best_bound - obj_val) / abs(obj_val) if obj_val != 0 else float('inf')  # Compute MIP gap
+            print("best_bound:", best_bound)
+            print("obj_val:",obj_val)
+            mip_gap = (abs(best_bound - obj_val) / abs(obj_val)) if obj_val != 0 else float('inf')  # Compute MIP gap
+            my_mip_gap = (abs(best_bound - obj_val) / (abs(obj_val)+1)) #case almost 0
             
             # Extract variable values
             var_values = {var.VarName: model.cbGetSolution(var) for var in model.getVars()}
@@ -42,16 +46,19 @@ def problem_fUNknown(predef_W,
             #print(f"Feasible Solution Found - Time: {runtime:.2f}s, Objective: {obj_val:.4f}, Gap: {mip_gap:.4%}, Solution: {var_str}")
             C_feas = np.array([v for k, v in var_values.items() if "C" in k]).reshape((K,d))
             X_feas = np.array([v for k, v in var_values.items() if "X" in k]).reshape((N,L))
-            print(f"Feasible Solution Found - Time: {runtime:.2f}s, Objective: {obj_val:.4f}, Gap: {mip_gap:.4%}, \nSolution C_feas: \n{C_feas.round(3)}\n Cluster composition: {X_feas.sum(axis=0)}")
+            print(f"Feasible Solution Found - Time: {runtime:.2f}s, Objective: {obj_val:.4f}, Gap: {my_mip_gap:.4%}, \nSolution C_feas: \n{C_feas.round(3)}\n Cluster composition: {X_feas.sum(axis=0)}")
             
             # Store in a structured format
             solution_log.append({"Time (s)": runtime, 
                                  "Objective": obj_val, 
                                  "Gap (%)": mip_gap * 100,
+                                 "my gap (%)": my_mip_gap *100,
                                  "C_feas": C_feas,
                                  "X_feas": X_feas,
                                  **var_values  # Merge variable values into the dictionary
                                  })
+            if my_mip_gap <= 1e-4:
+                model.terminate()
             
         elif where == gp.GRB.Callback.MIP: # General MIP progress
 
@@ -79,6 +86,9 @@ def problem_fUNknown(predef_W,
 
 
     model = gp.Model()
+
+    if mipgapabs is not None:
+        model.setParam("MIPGapAbs", mipgapabs)
 
     if silence:
         model.setParam('OutputFlag', 0)
