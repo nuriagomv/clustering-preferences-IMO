@@ -25,9 +25,9 @@ np.set_printoptions(suppress=True)
 #parameters
 N_test= 100
 list_N = [25]
-list_K = [3]
+list_K = [2,3]
 list_d = [20]
-list_lambd = [0.1,0.25,0.5]
+list_lambd = [0.75]
 list_n_vars_perturbed = [1] #<= d, number of variables
 timelimit = 3600.
 multistart = False

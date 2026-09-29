@@ -23,9 +23,9 @@ np.set_printoptions(suppress=True)
 #parameters
 N_test= 100
 list_N = [100]
-list_K = [2]
+list_K = [3]
 list_d = [20]
-list_n_vars_perturbed = [0,1] #<= d, number of variables
+list_n_vars_perturbed = [0] #<= d, number of variables
 list_interpretability = [False]
 timelimit = 3600.
 
@@ -51,7 +51,7 @@ for seed in [2]:
                         L_max = K + math.comb(K, math.ceil(K/2))
                     list_L = list(range(2,L_max+1))
                     
-                    for L in list_L:
+                    for L in [5,6]:#list_L:
                         
                         print("\n-------------\n")
                         print("NUMBER OF CLUSTERS REQUIRED L =", L)

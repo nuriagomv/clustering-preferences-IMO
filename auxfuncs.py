@@ -4,21 +4,29 @@ import math
 import random
 from scipy.stats import spearmanr, kendalltau, wasserstein_distance
 from sklearn.metrics.pairwise import cosine_similarity
-
+import ot
 
 def analyze_instance(w_orig, w_est):
     
     #identify first priority of the objectives
     equal_maxs = w_est.argmax() in np.where(w_orig == np.max(w_orig))[0]
+    
     #rmse
     rmse = math.sqrt(mse(w_orig,w_est))
+
     #ranking
     rho, _ = spearmanr(w_orig, w_est)
     tau, _ = kendalltau(w_orig, w_est)
+
     #proportionality
     cos_sim = cosine_similarity(np.array(w_orig).reshape(1, -1), np.array(w_est).reshape(1, -1))[0][0]
+
     #spacing between weights
     emd = wasserstein_distance(w_orig, w_est)
+    #M = 1 - np.eye(K) #Moving mass between different categories is equally "bad". e.g., mover [1,0,0] a [0,1,0] es igual que a [0,0,1]
+    #emd = ot.emd2(w_orig, w_est, M)
+
+
 
     return equal_maxs, rmse, rho, tau, cos_sim, emd
 
